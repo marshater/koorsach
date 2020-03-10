@@ -15,12 +15,20 @@ void DieWithError(char *errorMessage)
     exit(1);
 }
 
-int acceptConnection(int Server_Socket)
+int ReceiveTCP(int Server_Socket)
 {
     int Client_Socket;
     struct sockaddr_in Client_Address;
     unsigned int Client_Length;
 
+    if ((Client_Socket = socket(PF_INET, SOCK_STREAM, 0)) < 0)
+    {
+    DieWithError("Cant accept connection");
+    }
+    if(Bind_Socket = bind(Client_Socket, (struct sockaddr *) &Client_Address, sizeof(Client_Address)) < 0)
+    {
+    DieWithError("Cant accept connection");
+    }
     if(Client_Socket = accept(Server_Socket, (struct sockaddr *) &Client_Address, sizeof(Client_Address)) < 0)
     {
         DieWithError("Cant accept connection");
@@ -29,23 +37,6 @@ int acceptConnection(int Server_Socket)
     return(Client_Socket);
 }
 
-int binder (int Server_Socket)
-{
-    if(Bind_Socket = bind(Server_Socket, (struct sockaddr *) &Client_Address, sizeof(Client_Address)) < 0)
-    {
-    DieWithError("Cant accept connection");
-    }
-}
-
-int Socketer(NULL)
-{
-    int Req_Socket
-    if ((Req_Socket = socket(PF_INET, SOCK_DGRAM, 0)) < 0)
-    {
-    DieWithError("Cant accept connection");
-    }
-    return Req_Socket
-}
 
 int main(int argc, char ** argv)
 {

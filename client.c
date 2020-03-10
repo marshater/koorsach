@@ -23,6 +23,22 @@ struct Premessage
 	int Number;
 };
 
+int SendTCP(void* arg)
+{
+struct sockaddr_in *serv = (struct sockaddr_in*) arg;
+int Client_Socket;
+	if ((Client_Socket = socket(PF_INET, SOCK_STREAM, 0)) < 0)
+    	{
+    	DieWithError("Cant accept connection");
+    	}
+    if (connect(Client_Socket,(struct sockaddr*) serv, sizeof(serv)) != 0)
+    	{
+    		DieWithError("Cant connect");
+    	};
+    send(Client_Socket, *Premessage, sizeof(Premessage), 0);
+}
+
+
 char *MessageGenerator(int N)
 {
 	char *pack;
@@ -59,7 +75,7 @@ int main(int argc, char ** argv)
     server_addr.sin_addr.s_addr = inet_addr(server_ip);
     server_addr.sin_port = htons(server_port);
 
-    client_addr.sin_family = AF_INET;
+    client_addr.sin_family = PF_INET;
     client_addr.sin_addr.s_addr = INADDR_ANY;
     client_addr.sin_port = htons(client_port);
 
@@ -67,12 +83,12 @@ int main(int argc, char ** argv)
 	char *message;
 
 
-    if ((UDP_SOCKET = socket(PF_INET, SOCK_DGRAM, 0)) < 0)
+    if ((TCP_SOCKET = socket(PF_INET, SOCK_STREAM, 0)) < 0)
     {
     dieWithError("Cant accept connection");
     }
 
-    int rc = bind(UDP_SOCKET, (struct sockaddr *) &client_addr, sizeof(client_addr));
+    int rc = bind(TCP_SOCKET, (struct sockaddr *) &client_addr, sizeof(client_addr));
 
     if(rc == -1)
     {
@@ -90,7 +106,5 @@ int main(int argc, char ** argv)
 	{
 	printf("%c\n", message[i]);
 	}
-	rc = sendto(rc, &message, sizeof(*message), 0, (struct sockaddr*) &server_addr, sizeof(struct sockaddr_in));
-
 
 }
