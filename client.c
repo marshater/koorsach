@@ -10,6 +10,9 @@
 #include <netinet/in.h>
 #include <time.h>
 
+#define MAX_LENGHT 30
+#define MAX_SLEEPTIME 10
+#define RECEIVEPORT 32000
 
 void dieWithError(char *errorMessage)
 {
@@ -23,67 +26,87 @@ struct Premessage
 	int Number;
 };
 
-int SendTCP(void* arg)
+struct message
 {
-struct sockaddr_in *serv = (struct sockaddr_in*) arg;
-int Client_Socket;
-	if ((Client_Socket = socket(PF_INET, SOCK_STREAM, 0)) < 0)
-    	{
-    	DieWithError("Cant accept connection");
-    	}
-    if (connect(Client_Socket,(struct sockaddr*) serv, sizeof(serv)) != 0)
-    	{
-    		DieWithError("Cant connect");
-    	};
-    send(Client_Socket, *Premessage, sizeof(Premessage), 0);
-}
-
+    struct sockaddr_in info;
+    struct Premessage premessage;
+    char *message;
+};
 
 char *MessageGenerator(int N)
 {
-	char *pack;
-	srand(time(NULL));
-	static char charset[] = "qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890";
-	int lenght = N;
-	pack = malloc(sizeof(char) * lenght);
-	for(int i = 0; i < lenght; i++ )
-	{
-		pack[i] = charset[rand()%(strlen(charset))];
-	}
-	return (char*)pack;
+    char *pack;
+    srand(time(NULL));
+    static char charset[] = "qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890";
+    int lenght = N;
+    pack = malloc(sizeof(char) * lenght);
+    for(int i = 0; i < lenght; i++)
+    {
+        pack[i] = charset[rand()%(strlen(charset))];
+    }
+    return (char*)pack;
 }
 
 struct Premessage FillPremessage(struct Premessage Premessage) //Больше премессагов богу премессагов! :)
 {
-	srand(time(NULL));
-	Premessage.TimeToSleep = rand()%8;
-	Premessage.Number = rand()%30;
-	return(Premessage);
+    srand(time(NULL));
+    Premessage.TimeToSleep = rand()%MAX_SLEEPTIME;
+    Premessage.Number = rand()%MAX_LENGHT + 1;
+    return(Premessage);
 }
+
+int SendTCP(void* arg)
+{
+    struct sockaddr_in client_addr = {0};
+    struct sockaddr_in server_addr = {0};
+    client_addr.sin_family = PF_INET;
+    client_addr.sin_addr.s_addr = INADDR_ANY;
+    client_addr.sin_port = htons(32001);
+
+    server_addr.sin_family = PF_INET;
+    server_addr.sin_addr.s_addr = INADDR_ANY;
+    server_addr.sin_port = htons(RECEIVEPORT);
+
+    struct Premessage name;
+    name = FillPremessage(name);
+    char *mess = MessageGenerator(name.Number);
+/*struct message *info = (struct message*) arg;
+struct sockaddr_in serv_adr = info->info;
+struct Premessage premessage = info->premessage;
+char *msg = info->message;*/
+    int Client_Socket;
+//    printf(stderr, "123\n");
+
+    printf("%i\n", name.TimeToSleep);
+
+
+	if ((Client_Socket = socket(PF_INET, SOCK_STREAM, 0)) < 0)
+    	{
+    	dieWithError("Cant accept connection");
+    	}
+    if (connect(Client_Socket,(struct sockaddr*) &server_addr, sizeof(server_addr)) < 0)
+    	{
+    		dieWithError("Cant connect");
+    	};
+    printf("%i\n", &name);
+    send(Client_Socket,&name, sizeof(name), 0);
+    send(Client_Socket, &mess, sizeof(mess), 0);
+}
+
 
 int main(int argc, char ** argv)
 {
 	int UDP_SOCKET;
-    char * server_ip = argv[1];
-    char * server_port = argv[2];
-    char * client_port = argv[3];
 
     struct sockaddr_in server_addr = {0};
     struct sockaddr_in client_addr = {0};
-
-    server_addr.sin_family = PF_INET;
-    server_addr.sin_addr.s_addr = inet_addr(server_ip);
-    server_addr.sin_port = htons(server_port);
-
-    client_addr.sin_family = PF_INET;
-    client_addr.sin_addr.s_addr = INADDR_ANY;
-    client_addr.sin_port = htons(client_port);
-
-    int N = 3;
-	char *message;
+/*    struct Premessage name;
+    name = FillPremessage(name);
+    char *mess = MessageGenerator(name.Number);*/
 
 
-    if ((TCP_SOCKET = socket(PF_INET, SOCK_STREAM, 0)) < 0)
+
+/*    if ((TCP_SOCKET = socket(PF_INET, SOCK_STREAM, 0)) < 0)
     {
     dieWithError("Cant accept connection");
     }
@@ -96,15 +119,9 @@ int main(int argc, char ** argv)
         close(UDP_SOCKET);
     }
 
-	struct Premessage name;
-	name = FillPremessage(name);
-	printf("%i\n", name.TimeToSleep);
-	printf("%i\n", name.Number);
-	message = MessageGenerator(name.Number);
+*/
 
-	for (int i = 0; i < name.Number; i++)
-	{
-	printf("%c\n", message[i]);
-	}
 
+
+    SendTCP(0);
 }
