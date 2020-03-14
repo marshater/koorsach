@@ -1,4 +1,4 @@
-#include "TCPEchoServer.h"  /* TCP echo server includes */
+#include <unistd.h>
 #include <sys/time.h>       /* for struct timeval {} */
 #include <fcntl.h>          /* for fcntl() */
 #include <stdio.h>      /* for printf() */
@@ -66,27 +66,29 @@ int UDP_Broadcast1(void* arg)
 int main(int argc, char ** argv)
 {	
 	pthread_t TCP1, TCP2, UDP1, UDP2;
-	key_t key = 0;
-	int Newqueue = msgget(key, IPC_PRIVATE);
+	key_t key = IPC_PRIVATE;
+	int Newqueue = msgget(key, IPC_CREAT);
 	if (Newqueue < 0)
 		DieWithError("Cant create queue");
 	printf("bruh0");
+
 	int result = pthread_create(&TCP1, NULL, ReceiveTCP, &Newqueue);
 		if (result != 0) {
 		perror("Creating the first thread");
 		return EXIT_FAILURE;
 	}
+	pthread_join(TCP1, NULL);
 //	pthread_create(&TCP2, NULL, SendTCP, &Newqueue);
-	return 0;
+		msgctl(result, IPC_RMID, NULL);
 }
 
 void *ReceiveTCP(void *arg) //иногда трассируется до пятого, чаще всего остается на нуле.
 {
 	struct sockaddr_in serv_addr, cli_addr;
 	int Client_Socket, Bind_Socket, bytes_recv1, bytes_recv2;
-    char buff2[MAXMSGLEN];
+    char *buff2;
     int *buff1;
-    int Newq =(int) arg;
+    int Newq; //=(int) arg;
     printf("%i\n",Newq);
     printf("bruh1");
 	serv_addr.sin_family = PF_INET;
@@ -104,17 +106,17 @@ void *ReceiveTCP(void *arg) //иногда трассируется до пят�
 	printf("bruh2");
     Client_Socket = socket(PF_INET, SOCK_STREAM, 0);
 
-    /*if(Client_Socket < 0)
+    if(Client_Socket < 0)
     {
     DieWithError("Cant accept connection");
-    }*/
+    }
 
     printf("bruh3");
 	bind(Client_Socket, (struct sockaddr *) &serv_addr, sizeof(serv_addr));
-    /*if(Bind_Socket < 0)
+    if(Bind_Socket < 0)
     {
     DieWithError("Cant accept connection");
-    }*/
+    }
 
     printf("bruh4");
     listen(Client_Socket, 5);
@@ -122,19 +124,19 @@ void *ReceiveTCP(void *arg) //иногда трассируется до пят�
     while(1){
     printf("bruh5");
 	Bind_Socket = accept(Client_Socket, (struct sockaddr *) &cli_addr, &clilen);
-    /*if(Bind_Socket < 0)
+    if(Bind_Socket < 0)
     {
         DieWithError("Cant accept connection");
-    }*/
-    //printf("Accepted with ", inet_ntoa(cli_addr.sin_addr),"\n");
+    }
+    printf("Accepted with ", inet_ntoa(cli_addr.sin_addr),"\n");
     bytes_recv1 = recv(Bind_Socket, &buff1 , sizeof(buff1), 0);
-    //bytes_recv2 = recv(Bind_Socket, &buff2, sizeof(buff1), 0);
+    bytes_recv2 = recv(Bind_Socket, &buff2, sizeof(buff1), 0);
     printf("bruh6");
-    //printf("%i\n", *buff1);
-    //printf("%c\n", (char)buff2[0]);
+    printf("%i\n", *buff1);
+    printf("%c\n", (char)buff2[0]);
     int test = msgsnd(Newq, &buff2, sizeof(struct msgbuf)-sizeof(long), 0);
-//	if(test == -1)
-//		DieWithError("Cant send to queue");
+	if(test == -1)
+		DieWithError("Cant send to queue");
 }
 close(Client_Socket);
 close(Bind_Socket);
