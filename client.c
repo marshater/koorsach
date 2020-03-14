@@ -1,4 +1,4 @@
-#include "TCPEchoServer.h"  /* TCP echo server includes */
+#include <unistd.h>  /* TCP echo server includes */
 #include <sys/time.h>       /* for struct timeval {} */
 #include <fcntl.h>          /* for fcntl() */
 #include <stdio.h>      /* for printf() */
@@ -9,6 +9,8 @@
 #include <netinet/in.h>
 #include <netinet/in.h>
 #include <time.h>
+#include <string.h>
+
 
 #define MAX_LENGHT 30
 #define MAX_SLEEPTIME 10
@@ -20,40 +22,29 @@ void dieWithError(char *errorMessage)
     exit(1);
 }
 
-struct Premessage
-{
-	int TimeToSleep;
-	int Number;
-};
 
 struct message
 {
-    struct sockaddr_in info;
-    struct Premessage premessage;
-    char *message;
+    int TimeToSleep;
+    int Number;
+    char message[MAX_LENGHT];
 };
 
-char *MessageGenerator(int N)
+
+
+/*struct message Fillmessage(struct message message) //Больше премессагов богу премессагов! :)
 {
-    char *pack;
     srand(time(NULL));
+    message.TimeToSleep = 1 + rand()%MAX_SLEEPTIME;
+    message.Number = 1 + rand()%MAX_LENGHT;
     static char charset[] = "qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890";
-    int lenght = N;
-    pack = malloc(sizeof(char) * lenght);
+    int lenght = message.Number;
+//    message.message[MAX_LENGHT] = malloc(sizeof(char) * lenght);
     for(int i = 0; i < lenght; i++)
     {
-        pack[i] = charset[rand()%(strlen(charset))];
+        message.message[i] = charset[rand()%(strlen(charset))];
     }
-    return (char*)pack;
-}
-
-struct Premessage FillPremessage(struct Premessage Premessage) //Больше премессагов богу премессагов! :)
-{
-    srand(time(NULL));
-    Premessage.TimeToSleep = rand()%MAX_SLEEPTIME;
-    Premessage.Number = rand()%MAX_LENGHT + 1;
-    return(Premessage);
-}
+}*/
 
 int SendTCP(void* arg)
 {
@@ -66,18 +57,29 @@ int SendTCP(void* arg)
     server_addr.sin_family = PF_INET;
     server_addr.sin_addr.s_addr = INADDR_ANY;
     server_addr.sin_port = htons(RECEIVEPORT);
-
-    struct Premessage name;
-    name = FillPremessage(name);
-    char *mess = MessageGenerator(name.Number);
+            
+    struct message name; //= Fillmessage(name);
+    srand(time(NULL));
+    name.TimeToSleep = 1 + rand()%MAX_SLEEPTIME;
+    name.Number = 1 + rand()%MAX_LENGHT;
+    static char charset[] = "qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890";
+    int lenght = name.Number;
+//    message.message[MAX_LENGHT] = malloc(sizeof(char) * lenght);
+    for(int i = 0; i < lenght; i++)
+    {
+        name.message[i] = charset[rand()%(strlen(charset))];
+    }
 /*struct message *info = (struct message*) arg;
 struct sockaddr_in serv_adr = info->info;
 struct Premessage premessage = info->premessage;
 char *msg = info->message;*/
     int Client_Socket;
 //    printf(stderr, "123\n");
-
     printf("%i\n", name.TimeToSleep);
+    printf("%i\n", name.Number);
+    for(int i = 0; i < name.Number; i++)
+
+    printf("%c", name.message[i]);
 
 
 	if ((Client_Socket = socket(PF_INET, SOCK_STREAM, 0)) < 0)
@@ -88,9 +90,9 @@ char *msg = info->message;*/
     	{
     		dieWithError("Cant connect");
     	};
-    printf("%i\n", &name);
-    send(Client_Socket,&name, sizeof(name), 0);
-    send(Client_Socket, &mess, sizeof(mess), 0);
+
+    send(Client_Socket, &name, sizeof(name), 0);
+
 }
 
 
@@ -124,4 +126,5 @@ int main(int argc, char ** argv)
 
 
     SendTCP(0);
+    return 0;
 }

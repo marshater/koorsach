@@ -1,4 +1,4 @@
-#include "TCPEchoServer.h"  /* TCP echo server includes */
+#include <unistd.h>
 #include <sys/time.h>       /* for struct timeval {} */
 #include <fcntl.h>          /* for fcntl() */
 #include <stdio.h>      /* for printf() */
@@ -10,23 +10,22 @@
 #include <netinet/in.h>
 #include <time.h>
 #define SENDPORT 33000
+#define MAXMSGLEN 30
+
+struct message
+{
+    int TimeToSleep;
+    int Number;
+    char message[MAXMSGLEN];
+};
+
 void dieWithError(char *errorMessage)
 {
     perror(errorMessage);
     exit(1);
 }
 
-struct Premessage
-{
-	int TimeToSleep;
-	int Number;
-};
 
-struct message
-{
-    struct Premessage premessage;
-    char *message;
-};
 
 int main(int argc, char ** argv)
 {
@@ -37,10 +36,12 @@ int main(int argc, char ** argv)
 
 	cli_addr.sin_family = PF_INET;
     cli_addr.sin_addr.s_addr = INADDR_ANY;
-    cli_addr.sin_port = htons(33002);
+    cli_addr.sin_port = htons(33001);
 
-    struct message buff1;
-    int Client_Socket,bytes_recv1;
+	struct message buff;
+    int bytes_recv1, bytes_recv2;;
+
+    int Client_Socket;
 	if ((Client_Socket = socket(PF_INET, SOCK_STREAM, 0)) < 0)
     {
     	dieWithError("Cant accept connection");
@@ -49,7 +50,17 @@ int main(int argc, char ** argv)
     {
     		dieWithError("Cant connect");
     };
-    bytes_recv1 = recv(Client_Socket, &buff1 , sizeof(buff1), 0);
+
+    //bytes_recv2 = recv(Client_Socket, buff1, sizeof(buff1), 0);
+    bytes_recv1 = recv(Client_Socket, &buff , MAXMSGLEN, 0);
+
+	printf("%i\n", buff.Number);
+    printf("%i\n", buff.TimeToSleep);
+    for(int i = 0; i < buff.Number; i++)
+    	printf("%c", buff.message[i]);
+
+
+return 0;
 
 
 
