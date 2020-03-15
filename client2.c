@@ -11,7 +11,8 @@
 #include <time.h>
 #define SENDPORT 33000
 #define MAXMSGLEN 30
-
+#define RESPORT 20
+#define TCPPORT 35000
 struct message
 {
     int TimeToSleep;
@@ -27,7 +28,7 @@ void dieWithError(char *errorMessage)
 
 
 
-int main(int argc, char ** argv)
+int main(int argc, char * argv[])
 {
 	struct sockaddr_in serv_addr, cli_addr;
 	serv_addr.sin_family = PF_INET;
@@ -36,28 +37,40 @@ int main(int argc, char ** argv)
 
 	cli_addr.sin_family = PF_INET;
     cli_addr.sin_addr.s_addr = INADDR_ANY;
-    cli_addr.sin_port = htons(33001);
+    cli_addr.sin_port = htons(TCPPORT);
 
-	struct message buff;
+
+	int buff1;
     int bytes_recv1, bytes_recv2;;
 
     int Client_Socket;
 	if ((Client_Socket = socket(PF_INET, SOCK_STREAM, 0)) < 0)
     {
-    	dieWithError("Cant accept connection");
+        for (int i = 0; i < RESPORT; i++)
+        cli_addr.sin_port = htons(TCPPORT+1+i);
     }
     if (connect(Client_Socket,(struct sockaddr*) &serv_addr, sizeof(serv_addr)) < 0)
     {
     		dieWithError("Cant connect");
     };
 
-    //bytes_recv2 = recv(Client_Socket, buff1, sizeof(buff1), 0);
-    bytes_recv1 = recv(Client_Socket, &buff , MAXMSGLEN, 0);
+    bytes_recv2 = recv(Client_Socket, &buff1, sizeof(int), 0);
+
+	struct message
+{
+    int TimeToSleep;
+    int Number;
+    char message[buff1];
+};
+	struct message buff;
+
+    bytes_recv1 = recv(Client_Socket, &buff , sizeof(buff), 0);
 
 	printf("%i\n", buff.Number);
     printf("%i\n", buff.TimeToSleep);
     for(int i = 0; i < buff.Number; i++)
     	printf("%c", buff.message[i]);
+    //sleep(buff.TimeToSleep);
 
 
 return 0;

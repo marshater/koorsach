@@ -11,7 +11,7 @@
 #include <sys/msg.h>
 #include <pthread.h>
 #include <errno.h>
-
+#include <sys/sem.h>
 
 #define MAXPENDING 5    /* Maximum outstanding connection requests */
 #define RCVBUFSIZE 32   /* Size of receive buffer */
@@ -40,6 +40,13 @@ struct message
     int Number;
     char message[MAXMSGLEN];
 };
+	union semun {
+		int val;   
+		struct semid_ds *buf; 
+		unsigned short *array; 
+		struct seminfo *__buf; 
+	};
+
 /*int queueMaster(int Newqueue,char* msg)
 {
 	struct msgbuf msghold;
@@ -60,15 +67,15 @@ int UDP_Broadcast2(void* arg)
     cli_addr.sin_addr.s_addr = INADDR_ANY;
     cli_addr.sin_port = htons(32001);
 	if ((UDP_Socket = socket(PF_INET, SOCK_DGRAM, 0)) < 0)
-    DieWithError("Cant accept connection");
-	*message = msgrcv(Newqueue, &buf,sizeof(struct msgbuf)-sizeof(long),0,0);
-	sendto(UDP_Socket, &message, sizeof(message), 0, (struct sockaddr*) &cli_addr, sizeof(struct sockaddr_in));
-}
-int UDP_Broadcast1(void* arg)
-{
-
+    DieWithError("Cant socketing udp connection");
+	if 
 }
 */
+//int UDP_Broadcast1(void* arg)
+
+
+
+
 int main(int argc, char ** argv)
 {	
 	pthread_t TCP1, TCP2, UDP1, UDP2;
@@ -83,9 +90,15 @@ int main(int argc, char ** argv)
 		perror("Creating the first thread");
 		return EXIT_FAILURE;
 	}
+
+
+
 	pthread_create(&TCP2, NULL, SendTCP, (void*)Newqueue);
 
+
 	pthread_join(TCP1, NULL);
+
+
 	pthread_join(TCP2, NULL);
 
 
@@ -94,12 +107,13 @@ int main(int argc, char ** argv)
 	return 0;
 }
 
-void *ReceiveTCP(void *arg) //иногда трассируется до пятого, чаще всего остается на нуле.
+void *ReceiveTCP(void *arg)
 {
 	struct sockaddr_in serv_addr, cli_addr;
 	int Client_Socket, Bind_Socket, bytes_recv1, bytes_recv2;
-    struct message buff;
-    int Newq =(int) arg;
+
+    int Newq = (int) arg;
+    int Num;
     //printf("%i\n",Newq);
     //printf("bruh1");
 	serv_addr.sin_family = PF_INET;
@@ -108,7 +122,7 @@ void *ReceiveTCP(void *arg) //иногда трассируется до пят�
 
 	cli_addr.sin_family = PF_INET;
     cli_addr.sin_addr.s_addr = INADDR_ANY;
-    cli_addr.sin_port = htons(32001);
+    cli_addr.sin_port = INADDR_ANY;
 
 	socklen_t clilen;
 	clilen = sizeof(cli_addr);
@@ -138,7 +152,18 @@ void *ReceiveTCP(void *arg) //иногда трассируется до пят�
         DieWithError("Cant accept connection");
     }
     printf("Accepted with ", inet_ntoa(cli_addr.sin_addr),"\n");
-    bytes_recv1 = recv(Bind_Socket, &buff , sizeof(struct message), 0);
+    bytes_recv1 = recv(Bind_Socket, &Num , sizeof(int), 0);
+
+    printf("%i\n", Num);
+    struct message
+{
+    int TimeToSleep;
+    int Number;
+    char message[Num];
+};
+	struct message buff;
+
+    bytes_recv2 = recv(Bind_Socket, &buff , sizeof(buff), 0);
 
 
     printf("%i\n", buff.TimeToSleep);
@@ -146,6 +171,7 @@ void *ReceiveTCP(void *arg) //иногда трассируется до пят�
 
     for(int i = 0; i < buff.Number; i++)
     	printf("%c", buff.message[i]);
+
     int test = msgsnd(Newq, &buff, sizeof(buff), 0);
 	if(test == -1)
 		DieWithError("Cant send to queue");
@@ -164,14 +190,14 @@ void *SendTCP(void *arg)
 
 	cli_addr.sin_family = PF_INET;
     cli_addr.sin_addr.s_addr = INADDR_ANY;
-    cli_addr.sin_port = htons(33001);
+    cli_addr.sin_port = INADDR_ANY;;
 
 	socklen_t clilen;
 	clilen = sizeof(cli_addr);
 
 
     int Client_Socket, Bind_Socket, bytes_recv1, bytes_recv2;
-    char buff[MAXMSGLEN];
+
     struct message buff1;
     if ((Client_Socket = socket(PF_INET, SOCK_STREAM, 0)) < 0)
     {
@@ -196,6 +222,8 @@ void *SendTCP(void *arg)
     printf("%i\n", buff1.TimeToSleep);
         for(int i = 0; i < buff1.Number; i++)
     	printf("%c", buff1.message[i]);
+    	if((send(Bind_Socket, &buff1.Number, sizeof(int), 0)) < 0)
+		DieWithError("Cant send it");
 
 	if((send(Bind_Socket, &buff1, sizeof(buff1) - sizeof(long), 0)) < 0)
 		DieWithError("Cant send it");
