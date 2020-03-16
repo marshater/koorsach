@@ -19,6 +19,7 @@
 #define SENDPORT 33000
 #define MAXMSGLEN 30
 #define MSGMAX 10
+#define UDPPORT 16000
 
 void DieWithError(char *errorMessage)
 {
@@ -34,6 +35,8 @@ struct msgbuf
 void *ReceiveTCP(void *arg);
 void *SendTCP(void *arg);
 
+int count = 10;
+
 struct message
 {
     int TimeToSleep;
@@ -47,30 +50,35 @@ struct message
 		struct seminfo *__buf; 
 	};
 
-/*int queueMaster(int Newqueue,char* msg)
-{
-	struct msgbuf msghold;
-	char *ptr;
-	int lenght;
-	if(msgsnd(Newqueue, *ptr, sizeof(struct msgbuf)-sizeof(long), 0, IPC_NOWAIT) == -1)
-		DieWithError("Cant create queue");
-}
 
-int UDP_Broadcast2(void* arg)
+void *UDP_Broadcast1(void* arg)
 {
 	int UDP_Socket;
-	int Newqueue;
-	char *message;
-	char *buf;
+	int msg;
+	printf("%i\n", msg);
 	struct sockaddr_in serv_addr, cli_addr;
-	cli_addr.sin_family = PF_INET;
+	cli_addr.sin_family = AF_INET;
     cli_addr.sin_addr.s_addr = INADDR_ANY;
-    cli_addr.sin_port = htons(32001);
+    cli_addr.sin_port = htons(28888);
+
+    serv_addr.sin_family = AF_INET;
+	serv_addr.sin_addr.s_addr = INADDR_ANY;
+	serv_addr.sin_port = htons(UDPPORT);
+
 	if ((UDP_Socket = socket(PF_INET, SOCK_DGRAM, 0)) < 0)
     DieWithError("Cant socketing udp connection");
-	if 
+	int rc = bind(UDP_Socket, (struct sockaddr *) &serv_addr, sizeof(serv_addr));
+    if (count > 0)
+    {
+    	msg = 1;
+    	printf("%i\n", msg);
+		sendto(UDP_Socket, &msg, sizeof(int), 0, (struct sockaddr*) &cli_addr, sizeof(cli_addr) );
+	} else {
+		msg = 0;
+		sendto(UDP_Socket, &msg, sizeof(msg), 0, (struct sockaddr*) &cli_addr, sizeof(cli_addr) );
+	}
 }
-*/
+
 //int UDP_Broadcast1(void* arg)
 
 
@@ -94,6 +102,8 @@ int main(int argc, char ** argv)
 
 
 	pthread_create(&TCP2, NULL, SendTCP, (void*)Newqueue);
+
+	pthread_create(&UDP1, NULL, UDP_Broadcast1, NULL);
 
 
 	pthread_join(TCP1, NULL);
@@ -164,13 +174,15 @@ void *ReceiveTCP(void *arg)
 	struct message buff;
 
     bytes_recv2 = recv(Bind_Socket, &buff , sizeof(buff), 0);
+    count = count -1;
+    printf("%i\n", count);
 
 
     printf("%i\n", buff.TimeToSleep);
     printf("%i\n", buff.Number);
 
-    for(int i = 0; i < buff.Number; i++)
-    	printf("%c", buff.message[i]);
+//    for(int i = 0; i < buff.Number; i++)
+//    	printf("%c", buff.message[i]);
 
     int test = msgsnd(Newq, &buff, sizeof(buff), 0);
 	if(test == -1)
@@ -209,7 +221,7 @@ void *SendTCP(void *arg)
     }
     listen(Client_Socket, 5);
 
-    while(1){
+//    while(1){
     if((Bind_Socket = accept(Client_Socket, (struct sockaddr *) &cli_addr, &clilen)) < 0)
     {
         DieWithError("Cant accept connection");
@@ -218,15 +230,20 @@ void *SendTCP(void *arg)
     int Newq = (int) arg;
 	if(msgrcv(Newq, &buff1, sizeof(buff1), 0,0) == -1)
 		DieWithError("Cant recieve from queue");
-	printf("%i\n", buff1.Number);
-    printf("%i\n", buff1.TimeToSleep);
-        for(int i = 0; i < buff1.Number; i++)
-    	printf("%c", buff1.message[i]);
+//	printf("%i\n", buff1.Number);
+//    printf("%i\n", buff1.TimeToSleep);
+//        for(int i = 0; i < buff1.Number; i++)
+//    	printf("%c", buff1.message[i]);
     	if((send(Bind_Socket, &buff1.Number, sizeof(int), 0)) < 0)
 		DieWithError("Cant send it");
 
 	if((send(Bind_Socket, &buff1, sizeof(buff1) - sizeof(long), 0)) < 0)
+	{
 		DieWithError("Cant send it");
+	}else{
+	count++;
+	printf("%i\n", count);
+//}
 }
 close(Client_Socket);
 close(Bind_Socket);
