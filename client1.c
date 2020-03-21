@@ -16,9 +16,11 @@
 #define MAX_LENGHT 30
 #define MAX_SLEEPTIME 10
 #define RECEIVEPORT 32000
-#define RESPORT 20
+#define RESPORT 10
 #define TCPPORT 34000
 #define UDPPORT 16000
+
+pthread_mutex_t status = PTHREAD_MUTEX_INITIALIZER;
 
 void dieWithError(char *errorMessage)
 {
@@ -82,22 +84,21 @@ char *msg = info->message;*/
     printf("%i\n", name.TimeToSleep);
     printf("%i\n", name.Number);
     for(int i = 0; i < name.Number; i++)
-
     printf("%c", name.message[i]);
 
 
 	if ((Client_Socket = socket(PF_INET, SOCK_STREAM, 0)) < 0)
-    	{
-            for(int i = 0; i < RESPORT; i++)
-            client_addr.sin_port = htons(TCPPORT+1+i);
-    	}
-    if (connect(Client_Socket,(struct sockaddr*) &server_addr, sizeof(server_addr)) < 0)
-    	{
-    		dieWithError("Cant connect");
-    	};
-    send(Client_Socket, &name.Number, sizeof(name.Number), 0);
-    send(Client_Socket, &name, sizeof(name), 0);
+    {
+    dieWithError("Cant socket this");
+    }
 
+    while (connect(Client_Socket,(struct sockaddr*) &server_addr, sizeof(server_addr)) < 0)
+    	{
+    	client_addr.sin_port = htons(TCPPORT+rand()%RESPORT);
+    	}
+//    send(Client_Socket, &name.Number, sizeof(name.Number), 0);
+    send(Client_Socket, &name, sizeof(struct message), 0);
+    sleep(name.TimeToSleep);
 }
 
 
@@ -108,7 +109,7 @@ int main(int argc, char ** argv)
 
 
     int pc = pthread_create(&UDP, NULL, UDP_listener, NULL);
-            if (pc != 0) {
+    if (pc != 0) {
         perror("Creating the first thread");
         return EXIT_FAILURE;
     }
@@ -122,32 +123,38 @@ int main(int argc, char ** argv)
 
 void *UDP_listener(void *arg){
     pthread_t TCP1;
-    int buf;
+    int checker2;
     struct sockaddr_in client_addr = {0};
     struct sockaddr_in server_addr = {0};
     client_addr.sin_family = AF_INET;
     client_addr.sin_addr.s_addr = INADDR_ANY;
-    client_addr.sin_port = htons(28888);
-    printf("SHUTUP");
+    client_addr.sin_port = htons(UDPPORT+1);
+
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = INADDR_ANY;
     server_addr.sin_port = htons(UDPPORT);
     int Client_Socket;
+
     if ((Client_Socket = socket(PF_INET, SOCK_DGRAM, 0)) < 0)
     {
-        dieWithError("Cant accept connection");
+    dieWithError("Cant bind connection");
     }
-    int rc = bind(Client_Socket, (struct sockaddr *) &client_addr, sizeof(client_addr));
+
+    while (bind(Client_Socket, (struct sockaddr *) &client_addr, sizeof(client_addr)) < 0)
+    {
+        client_addr.sin_port = htons(UDPPORT+rand()%RESPORT);
+    }
 
     int client_addr_size = sizeof(struct sockaddr_in);
-    recvfrom(Client_Socket, &buf, sizeof(int), 0, (struct sockaddr*) &server_addr, &client_addr_size);
-    printf("%i\n", buf);
-    if (buf = 1) {
+    while(1) {
+    pthread_mutex_lock(&status);
+    recvfrom(Client_Socket, &checker2, sizeof(int), 0, (struct sockaddr*) &server_addr, &client_addr_size);
+
+        if(checker2 == 1) {
         pthread_create(&TCP1, NULL, SendTCP, NULL);
         pthread_join(TCP1, NULL);
-    } else{
-        close(Client_Socket);
     }
-    pthread_exit(0);
-
+    pthread_mutex_lock(&status);
+    } 
+    close(Client_Socket);
 }
