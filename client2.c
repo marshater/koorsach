@@ -115,9 +115,8 @@ void *UDP_listener(void *arg)
     while(1)
     {
     	pthread_mutex_lock(&status);
-    	recvfrom(Client_Socket, &checker1, sizeof(int), 0, (struct sockaddr*) &server_addr, &client_addr_size);
-    	
-    	if (checker1 == 1) 
+    	int rec_bytes = recvfrom(Client_Socket, &checker1, sizeof(int), 0, (struct sockaddr*) &server_addr, &client_addr_size);
+    	if (rec_bytes > 0) 
     	{
         	pthread_create(&TCP, NULL, TCP_listen, NULL);
         	pthread_join(TCP, NULL);

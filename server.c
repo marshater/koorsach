@@ -94,26 +94,26 @@ int main(int argc, char ** argv)
 	int result1 = pthread_create(&TCP1, NULL, ReceiveTCP, (void*)Newqueue);
 	if (result1 != 0) 
 	{
-		DieWithError("Cant create thread 1")
+		DieWithError("Cant create thread 1");
 	}
 
 		int result2 = pthread_create(&TCP2, NULL, SendTCP, (void*)Newqueue);
 		if (result2 != 0) 
 	{
-		DieWithError("Cant create thread 2")
+		DieWithError("Cant create thread 2");
 	}
 
 
     int result3 = pthread_create(&UDP1, NULL, UDP_Broadcast1, (void*)Newqueue);
     if (result3 != 0) 
     {
-		DieWithError("Cant create thread 3")
+		DieWithError("Cant create thread 3");
 	}
 
     int result4 = pthread_create(&UDP2, NULL, UDP_Broadcast2, (void*)Newqueue);
     if (result4 != 0)
 	{
-	DieWithError("Cant create thread 4")
+	DieWithError("Cant create thread 4");
 	}
 
 
@@ -129,10 +129,6 @@ int main(int argc, char ** argv)
 //    {
 
     	pthread_join(UDP1, NULL);
-//    }
-
-//        while(buf.msg_qnum > 0)
-
     	pthread_join(UDP2, NULL);
 //    }
 
@@ -189,7 +185,7 @@ void *ReceiveTCP(void* arg)
     	{
         	DieWithError("Cant accept connection");
     	}
-    	printf("Accepted with ", inet_ntoa(cli_addr.sin_addr),"\n");
+//    	printf("Accepted with ", inet_ntoa(cli_addr.sin_addr),"\n");
 	    struct info TCPinfo;
 	    TCPinfo.NumQueue = (int) arg;
 	    TCPinfo.Bind_Socket = Bind_Socket;
@@ -250,6 +246,7 @@ void *SendTCP(void *arg)
 
 void *UDP_Broadcast1(void* arg)
 {
+
 	int UDP_Socket;
 	int locker1 = 1;
 	//printf("%i\n", msg);
@@ -269,15 +266,20 @@ void *UDP_Broadcast1(void* arg)
 
 	int rc = bind(UDP_Socket, (struct sockaddr *) &serv_addr, sizeof(serv_addr));
 //	printf("LOOK AT THIS ITS NUMBER", buf.msg_qnum, "\n" );
+	printf("Broadcast1 count:");
+//	printf("%i\n", count);
 	while(1)
 	{
-		for (int i = 0; i < RESPORT; i++)
+		printf("%i\n", count);
+		if(count < 10)
 		{
-			cli_addr.sin_port = htons(UDPPORT+i+1);
-			sendto(UDP_Socket, &locker1, sizeof(int), 0, (struct sockaddr*) &cli_addr, sizeof(cli_addr) );
-		} 
-	//close(UDP_Socket);
-	//pthread_exit(0);
+			for (int i = 0; i < RESPORT; i++)
+			{
+				cli_addr.sin_port = htons(UDPPORT+i+1);
+				sendto(UDP_Socket, &locker1, sizeof(int), 0, (struct sockaddr*) &cli_addr, sizeof(cli_addr) );
+			} 
+
+		}
 	}
 }
 
@@ -285,6 +287,7 @@ void *UDP_Broadcast1(void* arg)
 
 void *UDP_Broadcast2(void* arg)
 {
+
 	int UDP_Socket;
 	int locker2 = 1;
 //	printf("%i\n", msg);
@@ -308,18 +311,22 @@ void *UDP_Broadcast2(void* arg)
 	}
 
 	int rc = bind(UDP_Socket, (struct sockaddr *) &serv_addr, sizeof(serv_addr));
-//	printf("LOOK AT THIS ITS NUMBER", buf.msg_qnum, "\n" );
+	printf("Broadcast2 count:");
+	printf("%i\n", count);
 	while(1)
 	{
-		for (int i = 0; i < RESPORT; i++)
+		if(count > 0)
 		{
-			cli_addr.sin_port = htons(UDPPORT2+i+1);
-			sendto(UDP_Socket, &locker2, sizeof(int), 0, (struct sockaddr*) &cli_addr, sizeof(cli_addr) );
+			printf("%i\n", count);
+			for (int i = 0; i < RESPORT; i++)
+			{
+				cli_addr.sin_port = htons(UDPPORT2+i+1);
+				sendto(UDP_Socket, &locker2, sizeof(int), 0, (struct sockaddr*) &cli_addr, sizeof(cli_addr) );
+			}
 		}
 	}
-	//close(UDP_Socket);
-	//pthread_exit(0);
 }
+
 
 
 void *TCP_SENDER(void *arg)
@@ -361,7 +368,8 @@ struct message
 	send(Bind_Socket, &buff2, sizeof(buff2), 0);
 
 	count--;
-//			printf("%i\n", count);
+//	printf("Send count: ");
+//	printf("%i\n", count);
 	pthread_mutex_unlock(&tcpsnd);
 //			sleep(buff2.TimeToSleep);
 	close(Bind_Socket);
@@ -400,15 +408,10 @@ void *TCP_RECIEVER(void *arg)
 
 
 	count++;
+//    printf("Recieve count: ");
+//    printf("%i\n", count);
 
-    //printf("%i\n", count);
 
-
-    //printf("%i\n", buff.TimeToSleep);
-    //printf("%i\n", buff.Number);
-
-//    for(int i = 0; i < buff.Number; i++)
-//    	printf("%c", buff.message[i]);
 
     int test = msgsnd(Newq, &buff1, sizeof(struct message), 0);
 	if(test == -1)
