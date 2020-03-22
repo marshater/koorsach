@@ -44,56 +44,64 @@ void *TCP_listen(void *arg)
     cli_addr.sin_port = htons(TCPPORT);
 
     srand(time(NULL));
-	int buff1;
-    int bytes_recv1, bytes_recv2;
-    printf("loh3\n");
-    int Client_Socket;
+	int buff1, Client_Socket;
+
+
 	if ((Client_Socket = socket(PF_INET, SOCK_STREAM, 0)) < 0)
+	{
         dieWithError("cant socket");
+	}
 
     while (connect(Client_Socket,(struct sockaddr*) &serv_addr, sizeof(serv_addr)) < 0)
     {
 		cli_addr.sin_port = htons(TCPPORT+1+rand()%RESPORT);
     };
 
- //   bytes_recv2 = recv(Client_Socket, &buff1, sizeof(int), 0);
+    printf("loh3\n");
 
-/*	struct message
+	recv(Client_Socket, &buff1, sizeof(int), 0);
+
+	struct message
 {
     int TimeToSleep;
     int Number;
     char message[buff1];
-};*/
+};
+
 	struct message buff;
 
-    bytes_recv1 = recv(Client_Socket, &buff , sizeof(buff), 0);
+	recv(Client_Socket, &buff , sizeof(buff), 0);
 
 	printf("%i\n", buff.Number);
     printf("%i\n", buff.TimeToSleep);
+
    for(int i = 0; i < buff.Number; i++)
-    printf("%c", buff.message[i]);
+   {
+    	printf("%c", buff.message[i]);
+   }
     sleep(buff.TimeToSleep);
 }
 
 void *UDP_listener(void *arg)
 {
+	pthread_t TCP;
+    int checker1, Client_Socket;
 	struct sockaddr_in client_addr = {0};
     struct sockaddr_in server_addr = {0};
+    srand(time(NULL));
+
 	server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = INADDR_ANY;
     server_addr.sin_port = htons(UDPPORT);
-    pthread_t TCP;
-    int checker1;
-    srand(time(NULL));
+
+
     client_addr.sin_family = AF_INET;
     client_addr.sin_addr.s_addr = INADDR_ANY;
     client_addr.sin_port = htons(UDPPORT+1);
-    int Client_Socket;
 
-	
     if ((Client_Socket = socket(PF_INET, SOCK_DGRAM, 0)) < 0)
     {
-    dieWithError("Cant bind connection");
+    	dieWithError("Cant bind connection");
     }
 
 
@@ -107,28 +115,24 @@ void *UDP_listener(void *arg)
     while(1)
     {
     	pthread_mutex_lock(&status);
-    recvfrom(Client_Socket, &checker1, sizeof(int), 0, (struct sockaddr*) &server_addr, &client_addr_size);
-    if (checker1 == 1) {
-        pthread_create(&TCP, NULL, TCP_listen, NULL);
-        pthread_join(TCP, NULL);
-
+    	recvfrom(Client_Socket, &checker1, sizeof(int), 0, (struct sockaddr*) &server_addr, &client_addr_size);
+    	
+    	if (checker1 == 1) 
+    	{
+        	pthread_create(&TCP, NULL, TCP_listen, NULL);
+        	pthread_join(TCP, NULL);
+        	pthread_mutex_unlock(&status);
 //}
-}
-pthread_mutex_lock(&status);
-}
-close(Client_Socket);
+		}
+	}
+	close(Client_Socket);
 }
 
 int main(int argc, char * argv[])
 {
+	pthread_t UDP;
 
-pthread_t UDP;
-
-
-pthread_create(&UDP, NULL, UDP_listener, NULL);
-pthread_join(UDP, NULL);
-
-return 0;
-
-
+	pthread_create(&UDP, NULL, UDP_listener, NULL);
+	pthread_join(UDP, NULL);
+	return 0;
 }

@@ -38,20 +38,6 @@ struct message
 
 void *UDP_listener(void *arg);
 
-/*struct message Fillmessage(struct message message) //Больше премессагов богу премессагов! :)
-{
-    srand(time(NULL));
-    message.TimeToSleep = 1 + rand()%MAX_SLEEPTIME;
-    message.Number = 1 + rand()%MAX_LENGHT;
-    static char charset[] = "qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890";
-    int lenght = message.Number;
-//    message.message[MAX_LENGHT] = malloc(sizeof(char) * lenght);
-    for(int i = 0; i < lenght; i++)
-    {
-        message.message[i] = charset[rand()%(strlen(charset))];
-    }
-}*/
-
 void *SendTCP(void* arg)
 {
     struct sockaddr_in client_addr = {0};
@@ -65,38 +51,37 @@ void *SendTCP(void* arg)
     server_addr.sin_port = htons(RECEIVEPORT);
             
     struct message name; //= Fillmessage(name);
+
     srand(time(NULL));
     name.TimeToSleep = 1 + rand()%MAX_SLEEPTIME;
     name.Number = 1 + rand()%MAX_LENGHT;
     static char charset[] = "qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890";
     int lenght = name.Number;
-//    message.message[MAX_LENGHT] = malloc(sizeof(char) * lenght);
+
     for(int i = 0; i < lenght; i++)
     {
         name.message[i] = charset[rand()%(strlen(charset))];
     }
-/*struct message *info = (struct message*) arg;
-struct sockaddr_in serv_adr = info->info;
-struct Premessage premessage = info->premessage;
-char *msg = info->message;*/
     int Client_Socket;
-//    printf(stderr, "123\n");
-    printf("%i\n", name.TimeToSleep);
-    printf("%i\n", name.Number);
-    for(int i = 0; i < name.Number; i++)
-    printf("%c", name.message[i]);
 
+    printf("%i\n", name.Number);
+    printf("%i\n", name.TimeToSleep);
+    for(int i = 0; i < name.Number; i++)
+    {
+        printf("%c", name.message[i]);
+    }
 
 	if ((Client_Socket = socket(PF_INET, SOCK_STREAM, 0)) < 0)
     {
-    dieWithError("Cant socket this");
+        dieWithError("Cant socket this");
     }
 
     while (connect(Client_Socket,(struct sockaddr*) &server_addr, sizeof(server_addr)) < 0)
-    	{
+    {
     	client_addr.sin_port = htons(TCPPORT+rand()%RESPORT);
-    	}
-//    send(Client_Socket, &name.Number, sizeof(name.Number), 0);
+    }
+
+    send(Client_Socket, &name.Number, sizeof(name.Number), 0);
     send(Client_Socket, &name, sizeof(struct message), 0);
     sleep(name.TimeToSleep);
 }
@@ -105,19 +90,14 @@ char *msg = info->message;*/
 int main(int argc, char ** argv)
 {
 	pthread_t UDP;
-        
-
 
     int pc = pthread_create(&UDP, NULL, UDP_listener, NULL);
-    if (pc != 0) {
-        perror("Creating the first thread");
-        return EXIT_FAILURE;
+    if (pc != 0) 
+    {
+        dieWithError("Cant thread client1");
     }
 
     pthread_join(UDP, NULL);
-
-
-//}
     return 0;
 }
 
@@ -137,7 +117,7 @@ void *UDP_listener(void *arg){
 
     if ((Client_Socket = socket(PF_INET, SOCK_DGRAM, 0)) < 0)
     {
-    dieWithError("Cant bind connection");
+        dieWithError("Cant bind connection");
     }
 
     while (bind(Client_Socket, (struct sockaddr *) &client_addr, sizeof(client_addr)) < 0)
@@ -146,15 +126,16 @@ void *UDP_listener(void *arg){
     }
 
     int client_addr_size = sizeof(struct sockaddr_in);
-    while(1) {
-    pthread_mutex_lock(&status);
-    recvfrom(Client_Socket, &checker2, sizeof(int), 0, (struct sockaddr*) &server_addr, &client_addr_size);
-
-        if(checker2 == 1) {
-        pthread_create(&TCP1, NULL, SendTCP, NULL);
-        pthread_join(TCP1, NULL);
-    }
-    pthread_mutex_lock(&status);
+    while(1) 
+    {
+        pthread_mutex_lock(&status);
+        recvfrom(Client_Socket, &checker2, sizeof(int), 0, (struct sockaddr*) &server_addr, &client_addr_size);
+        if(checker2 == 1) 
+        {
+            pthread_create(&TCP1, NULL, SendTCP, NULL);
+            pthread_join(TCP1, NULL);
+            pthread_mutex_unlock(&status);
+        }
     } 
     close(Client_Socket);
 }
