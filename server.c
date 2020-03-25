@@ -44,10 +44,7 @@ void *UDP_Broadcast2(void* arg);
 void *TCP_SENDER(void *arg);
 void *TCP_RECIEVER(void *arg);
 
-int count = 1;
-
-
-
+int count = 0; // Ограничитель количества сообщений
 
 struct message
 {
@@ -56,40 +53,20 @@ struct message
     char message[MAXMSGLEN];
 };
 
-union semun {
-	int val;   
-	struct semid_ds *buf; 
-	unsigned short *array; 
-	struct seminfo *__buf; 
-};
-
 struct info
 {
     int Bind_Socket;
     int NumQueue;
 };
 
-
-
-
-
 int main(int argc, char ** argv)
 {	
 	pthread_t TCP1, TCP2, UDP1, UDP2;
-	key_t key = 9;
+	key_t key = 7;
 	int Newqueue = msgget(key, 0666 | IPC_CREAT);
 	if (Newqueue < 0)
 		DieWithError("Cant create queue");
 
-	union semun arg;
-
-	key_t key2 = 20;
-
-	int semid = semget(key2, 1, 0666 | IPC_CREAT);
-
-	arg.val = 20;
-
-	semctl(semid, 0, SETVAL, arg);
 
 	int result1 = pthread_create(&TCP1, NULL, ReceiveTCP, (void*)Newqueue);
 	if (result1 != 0) 
@@ -116,21 +93,11 @@ int main(int argc, char ** argv)
 	DieWithError("Cant create thread 4");
 	}
 
-
-
-
 	pthread_join(TCP1, NULL);
 	pthread_join(TCP2, NULL);
+    pthread_join(UDP1, NULL);
+    pthread_join(UDP2, NULL);
 
-	struct msqid_ds buf;
-    msgctl(Newqueue, IPC_STAT, &buf);
-
-//    while(buf.msg_qnum < 10)
-//    {
-
-    	pthread_join(UDP1, NULL);
-    	pthread_join(UDP2, NULL);
-//    }
 
 
 
@@ -147,8 +114,7 @@ void *ReceiveTCP(void* arg)
 	pthread_t TCP4;
     int Newq = (int) arg;
     int Num;
-    //printf("%i\n",Newq);
-    //printf("bruh1");
+
 	serv_addr.sin_family = PF_INET;
 	serv_addr.sin_addr.s_addr = INADDR_ANY;
 	serv_addr.sin_port = htons(RECEIVEPORT);
@@ -185,7 +151,6 @@ void *ReceiveTCP(void* arg)
     	{
         	DieWithError("Cant accept connection");
     	}
-//    	printf("Accepted with ", inet_ntoa(cli_addr.sin_addr),"\n");
 	    struct info TCPinfo;
 	    TCPinfo.NumQueue = (int) arg;
 	    TCPinfo.Bind_Socket = Bind_Socket;
@@ -194,7 +159,6 @@ void *ReceiveTCP(void* arg)
 	}
 	close(Client_Socket);
 	close(Bind_Socket);
-	//pthread_exit(0);
 }
 
 void *SendTCP(void *arg)
@@ -238,7 +202,6 @@ void *SendTCP(void *arg)
     	pthread_create(&TCP3, NULL, *TCP_SENDER, &TCPinfo);
     	pthread_join(TCP3, NULL);
 
-	//pthread_exit(0);
 	}
 	close(Client_Socket);
 	close(Bind_Socket);
@@ -248,8 +211,7 @@ void *UDP_Broadcast1(void* arg)
 {
 
 	int UDP_Socket;
-	int locker1 = 1;
-	//printf("%i\n", msg);
+
 	struct sockaddr_in serv_addr, cli_addr;
 	cli_addr.sin_family = AF_INET;
     cli_addr.sin_addr.s_addr = INADDR_ANY;
@@ -265,32 +227,29 @@ void *UDP_Broadcast1(void* arg)
 	}
 
 	int rc = bind(UDP_Socket, (struct sockaddr *) &serv_addr, sizeof(serv_addr));
-//	printf("LOOK AT THIS ITS NUMBER", buf.msg_qnum, "\n" );
-	printf("Broadcast1 count:");
-//	printf("%i\n", count);
-	while(1)
-	{
-		printf("%i\n", count);
-		if(count < 10)
+
+		int locker1;
+
+		for(;;)
 		{
-			for (int i = 0; i < RESPORT; i++)
+			if(count < 10)
 			{
-				cli_addr.sin_port = htons(UDPPORT+i+1);
-				sendto(UDP_Socket, &locker1, sizeof(int), 0, (struct sockaddr*) &cli_addr, sizeof(cli_addr) );
-			} 
-
+				for (int i = 0; i < RESPORT; i++)
+				{
+					cli_addr.sin_port = htons(UDPPORT+i+1);
+					int howsym = sendto(UDP_Socket, &locker1 , sizeof(locker1), 0 , (struct sockaddr*) &cli_addr, sizeof(cli_addr) );
+				}
+			} else 
+			{
+				printf("endpoint reached");
+			}
 		}
-	}
 }
-
-
 
 void *UDP_Broadcast2(void* arg)
 {
-
 	int UDP_Socket;
 	int locker2 = 1;
-//	printf("%i\n", msg);
 	struct sockaddr_in serv_addr, cli_addr;
 
 	struct msqid_ds buf;
@@ -299,7 +258,6 @@ void *UDP_Broadcast2(void* arg)
 
 	cli_addr.sin_family = AF_INET;
     cli_addr.sin_addr.s_addr = INADDR_ANY;
-    
 
     serv_addr.sin_family = AF_INET;
 	serv_addr.sin_addr.s_addr = INADDR_ANY;
@@ -311,19 +269,18 @@ void *UDP_Broadcast2(void* arg)
 	}
 
 	int rc = bind(UDP_Socket, (struct sockaddr *) &serv_addr, sizeof(serv_addr));
-	printf("Broadcast2 count:");
-	printf("%i\n", count);
-	while(1)
+
+	for(;;)
 	{
 		if(count > 0)
 		{
-			printf("%i\n", count);
 			for (int i = 0; i < RESPORT; i++)
 			{
 				cli_addr.sin_port = htons(UDPPORT2+i+1);
 				sendto(UDP_Socket, &locker2, sizeof(int), 0, (struct sockaddr*) &cli_addr, sizeof(cli_addr) );
 			}
 		}
+
 	}
 }
 
@@ -334,7 +291,6 @@ void *TCP_SENDER(void *arg)
 	struct info* mes = (struct info*) arg;
 	int Num;
 
-
 	int Newq = mes->NumQueue;
 	int Bind_Socket = mes->Bind_Socket;
 
@@ -343,7 +299,7 @@ void *TCP_SENDER(void *arg)
 		DieWithError("Cant recieve from queue");
 	}
 
-struct message
+struct message //переинициализируем структуру
 {
     int TimeToSleep;
     int Number;
@@ -357,34 +313,33 @@ struct message
 	{
 		DieWithError("Cant recieve from queue");
 	}
+	printf("%i\n", buff2.Number);
+    printf("%i\n", buff2.TimeToSleep);
+    for(int i = 0; i < buff2.Number; i++)
+    printf("%c", buff2.message[i]);
 
-//	printf("%i\n", buff2.Number);
-//    printf("%i\n", buff2.TimeToSleep);
- //       for(int i = 0; i < buff2.Number; i++)
- //   	printf("%c", buff2.message[i]);
-    send(Bind_Socket, &buff2.Number, sizeof(int), 0);
-
-
+    send(Bind_Socket, &buff2.Number, sizeof(int), 0); // Отправляем кол-во символов в сообщении
 	send(Bind_Socket, &buff2, sizeof(buff2), 0);
 
 	count--;
-//	printf("Send count: ");
-//	printf("%i\n", count);
-	pthread_mutex_unlock(&tcpsnd);
-//			sleep(buff2.TimeToSleep);
-	close(Bind_Socket);
 
+	pthread_mutex_unlock(&tcpsnd);
+	close(Bind_Socket);
 }
 
 void *TCP_RECIEVER(void *arg)
 {
 	int Num;
-
+	if (count >= 10) // Дополнительная защита от протекания
+	{
+		printf("<%s>:%d STOP RIGHT THERE YOU CRIMINAL SCUM! count=%d\n", __FUNCTION__, __LINE__, count);
+		return;
+	}
 	struct info* mes = (struct info*) arg;
 	int Newq = mes->NumQueue;
 	int Bind_Socket = mes->Bind_Socket;
 
-	recv(Bind_Socket, &Num , sizeof(int), 0);
+	recv(Bind_Socket, &Num , sizeof(int), 0); //Принимаем кол-во символов в сообщении
 
 	int check = msgsnd(Newq, &Num, sizeof(int), 0);
 	if(check == -1)
@@ -392,10 +347,7 @@ void *TCP_RECIEVER(void *arg)
 		DieWithError("Cant send to queue");
 	}
 
-//	printf("%i\n", Num);
-
-//    printf("%i\n", Num);
-    struct message
+    struct message // Переинициализируем структуру
 {
     int TimeToSleep;
     int Number;
@@ -406,12 +358,7 @@ void *TCP_RECIEVER(void *arg)
 	pthread_mutex_lock(&tcprcv);
 	recv(Bind_Socket, &buff1 , sizeof(struct message), 0);
 
-
 	count++;
-//    printf("Recieve count: ");
-//    printf("%i\n", count);
-
-
 
     int test = msgsnd(Newq, &buff1, sizeof(struct message), 0);
 	if(test == -1)
